@@ -1,32 +1,27 @@
-// News Image 20261125 — one image that sums up 25 November 2026 world news.
-// The image lives in this repository as entry.png (1024x683 PNG, 860,062 bytes).
-// A newspaper front page: masthead WORLD NEWS, dated Wednesday 25 November 2026,
-// headline HUAWEI GUILTY ON 10 COUNTS, plus six panels — Shanghai chief probed,
-// Colombia hostages, Hanoi blast, Russian jets near Korea, Senegal champions again,
-// Odesa strike kills 2.
-// This program does nothing but copy those exact bytes to /output/entry.png,
-// so every run produces identical output. No network access, no randomness.
-// After the copy it reads the output back and compares it byte for byte with
-// the source, so a short or corrupt write fails loudly instead of slipping by.
-// The OUTPUT_DIR variable exists only for local testing; the harness always
-// writes to /output, which is the default when it is unset.
-import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+// Front page for Wednesday 25 November 2026, as a single image file.
+// entry.png holds the whole entry. This script places an exact copy at
+// /output/entry.png and then checks the copy against the original, byte
+// for byte, so a truncated write is caught instead of graded.
+// Runs are deterministic: the bytes copied never change, and nothing
+// here touches the network or the clock. OUTPUT_DIR is a local-test
+// override only; the grader always uses /output.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const source = join(here, "entry.png");
-const outDir = process.env.OUTPUT_DIR ?? "/output";
-const target = join(outDir, "entry.png");
+const repoDir = new URL(".", import.meta.url).pathname;
+const imagePath = join(repoDir, "entry.png");
+const outputDir = process.env.OUTPUT_DIR ?? "/output";
+const outputPath = join(outputDir, "entry.png");
 
-mkdirSync(outDir, { recursive: true });
-copyFileSync(source, target);
-
-const wanted = readFileSync(source);
-const got = readFileSync(target);
-if (!wanted.equals(got)) {
-  throw new Error(
-    `output mismatch: ${target} is ${got.length} bytes, expected ${wanted.length} bytes from ${source}`,
-  );
+function placeFrontPage() {
+  const image = readFileSync(imagePath);
+  mkdirSync(outputDir, { recursive: true });
+  writeFileSync(outputPath, image);
+  const copy = readFileSync(outputPath);
+  if (!copy.equals(image)) {
+    throw new Error(`copy check failed for ${outputPath}`);
+  }
+  console.log(`front page placed at ${outputPath} (${image.length} bytes)`);
 }
-console.log(`wrote ${target} (${got.length} bytes, byte-identical to entry.png)`);
+
+placeFrontPage();
